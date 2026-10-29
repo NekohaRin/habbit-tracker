@@ -32,7 +32,10 @@ export async function run({ db, messaging, now = new Date(), force = false, log 
     } else {
       decision = shouldSendNow({ reminder, tz, now, lastSentDate: data.lastReminderDate ?? null });
     }
+    const who = `user ${uid.slice(0, 6)}…`;
     if (!decision.send) {
+      const r = reminder?.enabled === true ? (data.lastReminderDate === decision.today && !force ? 'already sent today' : 'not time yet') : 'reminder is off in settings';
+      log(`${who}: skipped (${r})`);
       stats.skipped += 1;
       continue;
     }
@@ -50,12 +53,13 @@ export async function run({ db, messaging, now = new Date(), force = false, log 
 
     if (!message) {
       // Semua sudah dicentang: tidak ada yang perlu diingatkan hari ini.
+      log(`${who}: skipped (no pending habits today: ${habits.length} habits, ${done.size} done)`);
       if (!force) await userRef.update({ lastReminderDate: today });
       stats.skipped += 1;
       continue;
     }
     if (tokensSnap.empty) {
-      log(`user ${uid.slice(0, 6)}…: no devices registered`);
+      log(`${who}: no devices registered`);
       stats.skipped += 1;
       continue;
     }
